@@ -375,7 +375,175 @@ la versión del contrato sube a 1.1.0.
 > agregue CA-35 y CA-36.
 
 **Consecuencia.** El cambio de 1.0.0 a 1.1.0 es de documentación: agrega dos supuestos y
-dos criterios, no altera ninguna respuesta de la API y no invalida ninguna de las 69
-pruebas existentes. La sección 10 declara que cada criterio tiene al menos una prueba, y
-CA-35 y CA-36 son la excepción vigente hasta que `contract-tester` las escriba; queda
-anotado en la propia sección 10 para que el hueco no sea silencioso.
+dos criterios, no altera ninguna respuesta de la API y no invalidó ninguna de las 69
+pruebas que existían al momento de la decisión. CA-35 y CA-36 quedaron sin prueba hasta el
+episodio 2, y mientras tanto la sección 10 de la spec declaró esa excepción de forma
+explícita para que el hueco no fuera silencioso.
+
+**Decisión sobre el resultado de los dos agentes.** Aceptar sin correcciones. La sesión
+principal corrió la suite completa y las verificaciones propias de la tabla de arriba antes
+de proponer el commit, y el humano commiteó el código y las pruebas tal como los entregaron
+los agentes.
+
+### Evidencia
+
+| Qué | Dónde |
+|---|---|
+| Código de producción entregado por `domain-builder` | commit `1122a9a` |
+| Suite de pruebas entregada por `contract-tester` | commit `18b92d7` |
+| Spec 1.1.0, este registro y la evidencia de preparación | commit `08179ae` |
+| Única definición de la regla de superposición | `src/reservas/domain.py`, función `intervals_overlap`, importada por `storage.py` |
+| Defecto que detectó la separación de roles | docstring de `src/reservas/api.py`, que documenta por qué el módulo no usa `from __future__ import annotations` |
+| Resultado ejecutado al momento del episodio | `.venv/Scripts/python -m pytest -q` con salida `69 passed, 1 warning` |
+
+---
+
+## Episodio 2. Pruebas de los dos criterios que agregó la spec 1.1.0
+
+**Fecha:** 2026-10-24
+
+### Objetivo y requisito
+
+Dar prueba automática a CA-35 y CA-36, los dos criterios que el episodio 1 agregó a la
+sección 10 de la spec. El requisito es doble: la consigna pide incluir y ejecutar pruebas
+automáticas de las reglas, y la propia sección 10 declara que cada criterio tiene al menos
+una prueba cuyo nombre empieza con su ID. Mientras esos dos criterios no la tuvieran, esa
+declaración era falsa y la spec lo decía de forma explícita.
+
+### Contexto suministrado
+
+| Qué | Forma |
+|---|---|
+| `docs/spec.md` 1.1.0 con S-11, S-12, CA-35 y CA-36 | Leído por el agente; el resultado esperado sale de ahí |
+| Que el cambio de 1.0.0 a 1.1.0 no invalida ninguna prueba previa | Explícito en la instrucción, para que no revisara las 69 existentes |
+| La suite existente, con sus fixtures y helpers | Indicación de reutilizar `tests/conftest.py` y `tests/helpers.py` en lugar de duplicarlos |
+| El caso de contraste que la spec no pide | Explícito en la instrucción, ver el extracto |
+| Directorio asignado y prohibidos | Solo `tests/`; nada en `src/`, `docs/` ni `.claude/` |
+| Entorno y comando | `.venv` con Python 3.11.9, ejecutar con `.venv/Scripts/python` |
+
+### Extracto de instrucción
+
+Lo que distingue a esta instrucción de un pedido genérico de cobertura es el caso de
+contraste, que no está en la spec y que una prueba derivada solo de la fila CA-35 no
+tendría:
+
+> Conviene que CA-35 incluya el caso de contraste: con una unidad que sí existe, un `start`
+> sin offset tiene que seguir dando `422 VALIDATION_ERROR`. Sin ese caso, una prueba que
+> solo mire el 404 pasaría igual si el endpoint devolviera 404 siempre.
+
+Y la restricción de no tocar la nota que la spec tenía en ese momento:
+
+> La sección 10 de la spec tiene hoy una nota que dice que CA-35 y CA-36 todavía no tienen
+> prueba. Esa nota la quita la sesión principal cuando tus pruebas estén; no la toques vos.
+
+### Acción o resultado del agente
+
+11 pruebas nuevas, suite de 69 a 80, todas pasando.
+
+Para CA-35 escribió dos pruebas parametrizadas con los mismos cuatro queries inválidos, 8
+casos en total: la unidad inexistente devuelve `404 UNIT_NOT_FOUND` con los cuatro, y la
+misma query contra `MIC-01`, que sí existe, sigue devolviendo `422 VALIDATION_ERROR`. Es el
+caso de contraste que se le pidió.
+
+Para CA-36 creó `tests/test_filtros_historial.py` en lugar de usar el archivo existente
+`tests/test_contrato_sin_criterio.py`, con un motivo que no se le había dado: el docstring
+de ese archivo declara que cubre las partes del contrato sin criterio CA asociado, y CA-36
+ahora tiene ID. Agregó una tercera prueba, que tampoco se le pidió, para la parte central de
+S-12: sin filtros el endpoint devuelve `200` con el historial, y los dos filtros vacíos
+devuelven 422. Sin ese caso, una implementación que tratara el filtro vacío como ausente no
+quedaría descartada.
+
+Respetó los límites: escribió solo en `tests/`, no tocó la nota de la spec y no hizo commits.
+
+### Verificado por la sesión principal
+
+| Comando | Resultado |
+|---|---|
+| `.venv/Scripts/python -m pytest -q` | `80 passed, 1 warning in 3.79s` |
+| Nombres recolectados cruzados contra la lista de criterios | 36 de 36, ninguno faltante |
+
+Antes de documentar S-11 y S-12 en la spec, y por lo tanto antes de esta delegación, la
+sesión principal verificó los dos comportamientos contra la API con un script propio,
+independiente de `tests/`: unidad inexistente con `start` sin offset y sin `end` da
+`404 UNIT_NOT_FOUND`; la misma consulta sobre `MIC-01` da `422 VALIDATION_ERROR`;
+`unit_id` vacío da `422 UNKNOWN_UNIT`; `status` vacío da `422 VALIDATION_ERROR`; sin filtros
+da `200`. Esa verificación es la que justifica haber escrito los supuestos como contrato, y
+es anterior e independiente de las pruebas que escribió el agente.
+
+### Decisión del humano y motivo
+
+**Decisión.** Aceptar las 11 pruebas sin correcciones, y quitar de la sección 10 de la spec
+la nota que declaraba a CA-35 y CA-36 como excepción sin prueba.
+
+**Motivo.** `PENDIENTE`. Lo dicta el humano.
+
+### Evidencia
+
+| Qué | Dónde |
+|---|---|
+| Pruebas de CA-35 | `tests/test_disponibilidad.py`, `test_ca35_la_unidad_inexistente_da_404_aunque_la_query_sea_invalida` y `test_ca35_la_unidad_existente_con_la_misma_query_invalida_da_422` |
+| Pruebas de CA-36 | `tests/test_filtros_historial.py`, las tres `test_ca36_*` |
+| Commit de las pruebas | `18b92d7` |
+| Criterios y supuestos que cubren | `docs/spec.md` 1.1.0, S-11, S-12, CA-35 y CA-36, en el commit `08179ae` |
+| Resultado ejecutado | `.venv/Scripts/python -m pytest -q` con salida `80 passed, 1 warning` |
+
+---
+
+## Episodio 3. El clasificador de permisos bloquea la instalación del `CLAUDE.md` remoto
+
+**Fecha:** 2026-10-19
+
+Este episodio ocurrió antes de los otros dos, al preparar el agente. Lo que sigue reformatea
+con los cinco campos lo que ya registran D-001 de este archivo y el control 1 de
+`docs/agent-setup.md`; no agrega hechos nuevos.
+
+### Objetivo y requisito
+
+Dotar al proyecto de instrucciones de agente a nivel repositorio, que es la primera parte de
+la dimensión "Preparación y uso del agente" de la rúbrica. El archivo elegido fue el
+`CLAUDE.md` público de `drona23/claude-token-efficient`, 352 bytes, por el motivo que
+registra D-001.
+
+### Contexto suministrado
+
+La URL cruda del archivo, indicada por el humano. Ninguna otra: la política de red de la
+sesión es lectura solo de URLs que indica el humano, como declara la tabla de herramientas
+de `docs/agent-setup.md`.
+
+### Extracto de instrucción
+
+La acción que se le pidió al agente fue escribir el archivo directamente desde la red:
+
+> `curl -o CLAUDE.md https://raw.githubusercontent.com/drona23/claude-token-efficient/main/CLAUDE.md`
+
+### Acción o resultado del agente
+
+El clasificador de permisos del harness rechazó la ejecución con motivo
+`Instruction Poisoning`. El comando no corrió y no se escribió ningún archivo.
+
+El razonamiento del control es correcto, y por eso no se buscó la forma de evadirlo:
+escribir sin revisión, y como configuración del agente, instrucciones traídas de un tercero
+es un vector de inyección. El archivo no es un dato más, pasa a gobernar el comportamiento
+del agente en todas las sesiones siguientes sobre este repositorio.
+
+### Decisión del humano y motivo
+
+**Decisión.** Corregir el procedimiento, no desactivar el control ni reintentar el comando.
+Se descargó el contenido a salida estándar, se revisó completo y recién entonces se escribió
+el archivo de forma explícita.
+
+**Motivo.** Registrado en D-001: el contenido resultó ser 352 bytes con seis reglas de
+estilo y verificación, sin instrucciones de ejecución ni referencias externas, de modo que
+instalarlo era seguro una vez leído. La regla que prohíbe afirmar versiones, flags o nombres
+de paquetes sin verificarlos es directamente útil para una entrega donde la consigna exige
+no inventar datos.
+
+### Evidencia
+
+| Qué | Dónde |
+|---|---|
+| Archivo instalado después de la revisión | `CLAUDE.md` en la raíz del repositorio, versionado |
+| Commit | `f5f6f24` |
+| Decisión, motivo y alternativa descartada | D-001 de este archivo |
+| El control que disparó | `docs/agent-setup.md`, "Controles aplicados", control 1 |
+| Efecto comprobable de la regla instalada | la tabla de entorno de `docs/agent-setup.md` declara cada versión con el comando que la obtuvo, `claude --version`, `git --version` y `python --version`, en lugar de afirmarlas de memoria |
