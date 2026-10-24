@@ -1,0 +1,8 @@
+# Configuracion local de la maquina: permisos concedidos y rutas propias.
+# El resto de la configuracion del agente (CLAUDE.md, .claude/agents/) se versiona
+# a proposito: es la evidencia de preparacion que pide la consigna.
+# La configuracion personal del autor vive en ~/.claude/ y nunca forma parte de este repo.
+.claude/settings.local.json
+
+# Base SQLite de ejecucion normal (docs/spec.md, seccion 8)
+data/
