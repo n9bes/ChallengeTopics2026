@@ -9,8 +9,9 @@ que no se versiona es `.claude/settings.local.json`, que contiene rutas de la m�
 permisos concedidos, y la configuración personal del autor, que vive fuera del repositorio
 y se resume saneada más abajo. Ver [Qué se excluye y por qué](#qué-se-excluye-y-por-qué).
 
-Estado: en construcción. Las secciones marcadas con `PENDIENTE` todavía no ocurrieron.
-No se registra como hecho nada que no se haya ejecutado.
+Estado: ya no quedan secciones marcadas con `PENDIENTE`. Del flujo descrito más abajo falta
+solo la revisión final con `/code-review`. No se registra como hecho nada que no se haya
+ejecutado.
 
 ## Entorno y modelo
 
@@ -152,6 +153,14 @@ subagentes de proyecto se cargan al iniciar la sesión. No se sustituyeron por u
 genérico con las instrucciones pegadas, porque así no se aplicarían las restricciones de
 herramientas de cada definición.
 
+Resolución, el mismo 2026-10-24: en una sesión nueva los tres tipos aparecieron disponibles
+y la delegación funcionó. `domain-builder` y `contract-tester` trabajaron en paralelo sobre
+`src/reservas/` y `tests/`, y más tarde `contract-tester` recibió un segundo pedido para los
+criterios CA-35 y CA-36. Queda confirmado que la condición es iniciar la sesión con los
+archivos ya presentes; no hay nada que recargar. El detalle de esa delegación, con lo que
+reportó cada agente y lo que verificó la sesión principal por su cuenta, está en el
+episodio 1 de `docs/decisions.md`.
+
 Trabajo que queda deliberadamente en la sesión principal, con el humano:
 
 - **Especificación.** Requiere resolver ambigüedades con el humano, y los subagentes no
@@ -168,12 +177,30 @@ la sesión principal integra y el humano corre las pruebas (gate humano); al fin
 
 ## Adaptación específica
 
-`PENDIENTE`. La adaptación prevista es la regla de límites consecutivos: con una reserva
-activa de 10:00 a 11:00, el intervalo 11:00 a 12:00 debe aceptarse y 10:30 a 11:30 debe
-rechazarse. Es decir, intervalos semiabiertos `[inicio, fin)` y comparación estricta.
+La adaptación es la regla de límites consecutivos, que es donde más suele fallar una
+implementación de reservas: con una reserva activa de 10:00 a 11:00, el intervalo 11:00 a
+12:00 se acepta y 10:30 a 11:30 se rechaza. Es decir, intervalos semiabiertos
+`[inicio, fin)` y comparación estricta, no `<=`.
 
-Se instruirá una vez en la configuración del agente y se cubrirá con una prueba automática.
-La evidencia de uso será el enlace a la instrucción, a la prueba y al commit.
+Se instruyó una vez en la configuración versionada de los agentes, y quedó cubierta por
+pruebas. Cadena completa, inspeccionable:
+
+| Eslabón | Dónde |
+|---|---|
+| Instrucción al implementador | [`domain-builder.md`](../.claude/agents/domain-builder.md), en "Reglas del dominio que no se negocian": "10:00 a 11:00 y 11:00 a 12:00 no se superponen" |
+| Instrucción al autor de pruebas | [`contract-tester.md`](../.claude/agents/contract-tester.md), en la cobertura mínima: "Límites consecutivos aceptados: 11:00 a 12:00 tras 10:00 a 11:00" |
+| Regla en el contrato | `docs/spec.md`, R-02 y R-03, con su consecuencia escrita al final de la sección 4 |
+| Criterios de aceptación | CA-03 y CA-07 de la sección 10, que son el par del ejemplo de la consigna |
+| Pruebas | `tests/test_superposicion.py::test_ca03_rechaza_superposicion_parcial` y `tests/test_creacion.py::test_ca07_acepta_el_intervalo_inmediatamente_posterior`, más `test_ca08` para el límite anterior |
+| Implementación | `src/reservas/domain.py`, función `intervals_overlap` |
+| Commit de la implementación | `1122a9a` |
+| Commit de las pruebas | `test: cubrir los 36 criterios de aceptación de la spec` |
+
+Que la instrucción se aplicó, y no quedó en el papel, se ve en una consecuencia concreta:
+`intervals_overlap` es la única definición de la regla en todo el código, y `storage.py` la
+importa en lugar de reescribir la comparación en SQL. Reescribirla en SQL es la forma
+habitual de que la regla termine duplicada y las dos copias divergan, que es exactamente lo
+que R-07 prohíbe. Las pruebas de los dos límites pasan en la suite actual de 80.
 
 ## Retención del progreso
 

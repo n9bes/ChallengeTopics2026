@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Fecha | 2026-10-24 |
 | Estado del contrato | **CONGELADO**, aprobado por el humano el 2026-10-24 |
 
@@ -95,6 +95,8 @@ registra con su motivo en `docs/decisions.md`.
 | S-08 | El momento actual sale de un reloj inyectable. | Las pruebas de S-03 deben ser deterministas. |
 | S-09 | Un solo proceso local. La verificación de superposición y la inserción ocurren en la misma transacción de escritura. | Correcto ante pedidos simultáneos al mismo servidor, sin pretender concurrencia distribuida. |
 | S-10 | En una query string, el `+` de un offset debe codificarse como `%2B`, o usarse `Z`. | Es comportamiento estándar de URLs: un `+` sin codificar llega como espacio. |
+| S-11 | En `GET /units/{unit_id}/availability`, si la unidad no existe se devuelve `404 UNIT_NOT_FOUND` aunque además `start` o `end` sean inválidos. El orden de evaluación de 7.4 aplica solo a la creación. | La unidad es el recurso de la ruta: su ausencia es la falla más específica, y es el orden en que la tabla de 7.3 lista los errores. Documenta comportamiento ya implementado. Elegido por el humano, ver episodio 1. |
+| S-12 | En `GET /reservations`, un filtro presente pero vacío se valida, no se ignora: `unit_id=` devuelve `422 UNKNOWN_UNIT` y `status=` devuelve `422 VALIDATION_ERROR`. | Lectura literal de V-01 y de 7.4. Un filtro vacío es casi siempre un error del cliente; tratarlo como ausente devolvería el historial completo, que no es lo que se pidió. Documenta comportamiento ya implementado. Elegido por el humano, ver episodio 1. |
 
 ---
 
@@ -302,6 +304,8 @@ Cada criterio tiene al menos una prueba cuyo nombre empieza con su ID, por ejemp
 | CA-32 | Duración máxima, S-04 | Base vacía | Crear MIC-01 de `2026-11-03T13:00:00Z` a `2026-12-03T13:00:01Z`, 30 días y 1 segundo | `422 DURATION_TOO_LONG` |
 | CA-33 | Anticipación máxima, S-04 | Base vacía | Crear MIC-01 de `2026-12-02T12:00:00Z`, el reloj más 30 días exactos, a `2026-12-02T13:00:00Z` | `201` |
 | CA-34 | Anticipación máxima, S-04 | Base vacía | Crear MIC-01 de `2026-12-02T12:00:01Z` a `2026-12-02T13:00:00Z` | `422 TOO_FAR_AHEAD` |
+| CA-35 | Precedencia del 404, S-11 | Base vacía | Consultar `XYZ-99` con `start` sin offset y sin `end` | `404 UNIT_NOT_FOUND`, no `422` |
+| CA-36 | Filtros vacíos, S-12 | Base vacía | `GET /reservations?unit_id=` y `GET /reservations?status=` | `422 UNKNOWN_UNIT` en la primera, `422 VALIDATION_ERROR` en la segunda |
 
 Además, un procedimiento manual reproducible en el README verifica CA-29 y CA-30 con el
 servidor real: iniciar, crear, detener el proceso, volver a iniciar y consultar.
@@ -314,3 +318,4 @@ servidor real: iniciar, crear, detener el proceso, volver a iniciar y consultar.
 |---|---|---|
 | 0.1.0 | 2026-10-24 | Versión inicial. Supuestos S-01, S-03 y S-04 elegidos por el humano. Antes del primer commit, S-04 pasó de "sin límites" a máximo 30 días de duración y de anticipación (D-007). |
 | 1.0.0 | 2026-10-24 | Contrato congelado tras revisión humana, sin cambios de contenido respecto de 0.1.0. Habilita a `domain-builder` y `contract-tester`. |
+| 1.1.0 | 2026-10-24 | Supuestos S-11 y S-12 y criterios CA-35 y CA-36: precedencia del `404` en la consulta de disponibilidad y validación de los filtros vacíos. Documentan comportamiento ya implementado, no cambian ninguna respuesta de la API y no invalidan ninguna prueba existente. Motivo del humano en el episodio 1 de `docs/decisions.md`. |
