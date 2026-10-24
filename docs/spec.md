@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Versión | 0.1.0 |
+| Versión | 1.0.0 |
 | Fecha | 2026-10-24 |
-| Estado del contrato | **BORRADOR, pendiente de aprobación humana** |
+| Estado del contrato | **CONGELADO**, aprobado por el humano el 2026-10-24 |
 
 Los subagentes de implementación y pruebas no empiezan hasta que el estado del contrato diga
 `CONGELADO`. Cambiar el contrato después de congelado exige subir la versión y registrar el
@@ -313,3 +313,4 @@ servidor real: iniciar, crear, detener el proceso, volver a iniciar y consultar.
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 0.1.0 | 2026-10-24 | Versión inicial. Supuestos S-01, S-03 y S-04 elegidos por el humano. Antes del primer commit, S-04 pasó de "sin límites" a máximo 30 días de duración y de anticipación (D-007). |
+| 1.0.0 | 2026-10-24 | Contrato congelado tras revisión humana, sin cambios de contenido respecto de 0.1.0. Habilita a `domain-builder` y `contract-tester`. |
