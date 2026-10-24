@@ -145,6 +145,13 @@ la documentación oficial de subagentes de Claude Code.
 Ninguno tiene la herramienta `Agent`, así que no pueden lanzar subagentes propios. Todos se
 detienen si `docs/spec.md` no existe o no tiene el contrato congelado.
 
+Limitación observada el 2026-10-24: los archivos de `.claude/agents/` se crearon durante una
+sesión ya iniciada, y al intentar delegar en esa misma sesión el harness respondió
+`Agent type 'domain-builder' not found`, listando solo los agentes integrados. Los
+subagentes de proyecto se cargan al iniciar la sesión. No se sustituyeron por un agente
+genérico con las instrucciones pegadas, porque así no se aplicarían las restricciones de
+herramientas de cada definición.
+
 Trabajo que queda deliberadamente en la sesión principal, con el humano:
 
 - **Especificación.** Requiere resolver ambigüedades con el humano, y los subagentes no

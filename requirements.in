@@ -1,0 +1,7 @@
+# Dependencias directas. Fuente para regenerar requirements.txt:
+#   python -m pip install -r requirements.in
+#   python -m pip freeze > requirements.txt   (y volver a agregar el encabezado)
+fastapi   # API HTTP; trae pydantic v2 y starlette
+uvicorn   # servidor ASGI para ejecucion local
+httpx     # requerido por fastapi.testclient.TestClient
+pytest    # pruebas automaticas

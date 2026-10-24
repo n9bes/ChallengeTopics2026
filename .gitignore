@@ -6,3 +6,8 @@
 
 # Base SQLite de ejecucion normal (docs/spec.md, seccion 8)
 data/
+
+# Entorno virtual y artefactos de Python
+.venv/
+__pycache__/
+.pytest_cache/

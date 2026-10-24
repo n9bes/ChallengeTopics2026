@@ -186,3 +186,26 @@ determinista y se prueba sin depender del mes en curso.
 **Consecuencia.** Contradice el motivo original de D-005, que veía un límite como requisito
 inventado. Se acepta porque ahora hay una razón operativa explícita del humano que lo
 respalda, y queda registrada aquí.
+
+---
+
+## D-008. Dependencias con pip y requirements.txt, sin instalar el paquete
+
+**Fecha:** 2026-10-24
+
+**Decisión.** `requirements.in` lista las cuatro dependencias directas. `requirements.txt` es
+el archivo de bloqueo: salida de `pip freeze` con versiones exactas, incluidas las
+transitivas. El paquete no se instala: pytest lo encuentra con `pythonpath = ["src"]` en
+`pyproject.toml`, y uvicorn con `--app-dir src`. Ambas opciones se verificaron en la ayuda
+de las versiones instaladas.
+
+**Motivo.** pip viene con Python, así que reproducir el entorno no exige instalar otra
+herramienta. Elegido por el humano.
+
+**Alternativa.** uv con `uv.lock`. Se descartó porque uv no estaba instalado y sumaría un
+requisito previo. `pip install -e .` se descartó porque exige un backend de build y el
+archivo de bloqueo pasaría a incluir una línea editable dependiente de la ruta local.
+
+**Consecuencia.** El bloqueo se generó en Windows e incluye `colorama`, que en otros
+sistemas se instala igual aunque no se use. Regenerar exige volver a congelar y conservar
+el encabezado del archivo.
