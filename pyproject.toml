@@ -1,6 +1,6 @@
 [project]
 name = "reservas"
-version = "0.1.0"
+version = "1.1.0"
 description = "Sistema local de reservas de equipos de laboratorio"
 requires-python = ">=3.11"
 
@@ -8,5 +8,8 @@ requires-python = ">=3.11"
 # El paquete no se instala: pytest y uvicorn lo encuentran en src/.
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+# "tests" va en pythonpath para que `import helpers` resuelva con cualquier modo de
+# importacion. Sin esta linea la suite solo corre con el modo "prepend", el actual
+# por defecto, y falla al colectar con --import-mode=importlib.
+pythonpath = ["src", "tests"]
 testpaths = ["tests"]

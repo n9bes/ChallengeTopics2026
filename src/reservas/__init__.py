@@ -1,6 +1,6 @@
 """Sistema local de reservas de equipos de laboratorio.
 
-Implementa el contrato congelado de `docs/spec.md` v1.0.0.
+Implementa el contrato congelado de `docs/spec.md` v1.1.0, publicado en `__version__`.
 
 Capas:
 
@@ -16,4 +16,4 @@ Capas:
 
 __all__ = ["__version__"]
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

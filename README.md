@@ -136,7 +136,7 @@ La API queda en `http://127.0.0.1:8000`, con documentación interactiva en `/doc
 .venv/Scripts/python -m pytest
 ```
 
-Son 80 pruebas, derivadas de los criterios de aceptación CA-01 a CA-36. No hace falta
+Son 87 pruebas, derivadas de los criterios de aceptación CA-01 a CA-36. No hace falta
 instalar el paquete: `pyproject.toml` fija `pythonpath = ["src"]`.
 
 ### Endpoints
@@ -269,6 +269,11 @@ Sin `--db-path`, usa la misma ruta que el servidor: `RESERVAS_DB_PATH` o `data/r
 Códigos de salida: `0` si borró o no había nada que borrar, `1` si se canceló la
 confirmación, `2` si la ruta no es un archivo.
 
+Borra también los archivos auxiliares de SQLite que estén al lado de la base, con los
+sufijos `-journal`, `-wal` y `-shm`, y nombra en la salida los que encontró. Que no exista
+ninguno no es un error. Un archivo vecino que no sea auxiliar, por ejemplo una copia
+`reservas.db.bak`, no se toca.
+
 Detené el servidor antes de reiniciar los datos: si sigue corriendo, va a volver a crear el
 archivo vacío en el próximo pedido.
 
@@ -312,6 +317,11 @@ Quién ejecutó qué: ver "Pendientes y limitaciones" abajo.
 - **S-09 no es observable desde la API** en un solo proceso sin pruebas de concurrencia, que
   están fuera de alcance. Lo que se puede verificar es el código: la verificación y la
   inserción ocurren dentro de la misma transacción.
+- **El reinicio de datos no limpia un auxiliar de SQLite que haya quedado huérfano**, es
+  decir un `-journal`, `-wal` o `-shm` sin su archivo de base al lado. En ese caso informa
+  que no hay nada que borrar y sale con `0`. Esa rama retorna antes de pedir confirmación,
+  y limpiar ahí significaría borrar archivos sin preguntar. Desde la corrección de este
+  caso, el reinicio ya no produce ese estado; solo no limpia uno preexistente.
 - **Sin interfaz gráfica.** Diferida por D-004: la consigna no la exige y deja fuera de
   alcance un frente complejo.
 - **Un reloj inyectado que devuelva un `datetime` sin zona horaria levanta error 500**, no

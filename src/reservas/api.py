@@ -67,7 +67,9 @@ def create_app(*, db_path: Path, clock: Callable[[], datetime]) -> FastAPI:
     app = FastAPI(
         title="Sistema de reservas del laboratorio",
         version=__version__,
-        description="Implementa el contrato congelado de docs/spec.md v1.0.0.",
+        description=(
+            f"Implementa el contrato congelado de docs/spec.md v{__version__}."
+        ),
     )
     register_error_handlers(app)
 
