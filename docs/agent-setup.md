@@ -87,7 +87,7 @@ explícita.
 |---|---|
 | `~/.claude/CLAUDE.md` | Configuración personal del autor, aplica a todos sus proyectos, no es parte de esta entrega. Vive fuera del repositorio. Se incluye el resumen saneado de arriba. |
 | Memoria del agente (`~/.claude/projects/.../memory/`) | Preferencias personales de trabajo, externas al repositorio. |
-| `.claude/settings.local.json` | Única exclusión activa del `.gitignore`. Contiene permisos concedidos y rutas de esta máquina, que no son reproducibles ni necesarios para terceros. |
+| `.claude/settings.local.json` | Única exclusión del `.gitignore` que afecta a la configuración del agente; las otras cuatro entradas son el entorno virtual, los dos cachés y la base de ejecución. Cuando existe, contiene permisos concedidos y rutas de esta máquina, que no son reproducibles ni necesarios para terceros. En este checkout no existe, porque los permisos concedidos no se persistieron: la regla es preventiva. |
 | Transcripciones completas de la sesión | La consigna lo prohíbe de forma explícita. Se registran episodios puntuales con su evidencia. |
 | Correo y rutas locales de la máquina | Dato personal, sin valor para la reproducción. |
 
@@ -195,7 +195,7 @@ pruebas. Cadena completa, inspeccionable:
 | Pruebas | `tests/test_superposicion.py::test_ca03_rechaza_superposicion_parcial` y `tests/test_creacion.py::test_ca07_acepta_el_intervalo_inmediatamente_posterior`, más `test_ca08` para el límite anterior |
 | Implementación | `src/reservas/domain.py`, función `intervals_overlap` |
 | Commit de la implementación | `1122a9a` |
-| Commit de las pruebas | `test: cubrir los 36 criterios de aceptación de la spec` |
+| Commit de las pruebas | `18b92d7` |
 
 Que la instrucción se aplicó, y no quedó en el papel, se ve en una consecuencia concreta:
 `intervals_overlap` es la única definición de la regla en todo el código, y `storage.py` la

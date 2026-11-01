@@ -75,7 +75,7 @@ observables como supuestos S-11 y S-12.
 | `src/reservas/inventory.json` | Inventario precargado (sección 3) |
 | `tests/` | Pruebas derivadas de la spec |
 | `docs/spec.md` | Contrato: reglas, validaciones, supuestos, API y criterios de aceptación |
-| `docs/decisions.md` | Decisiones con su motivo, y los tres episodios de delegación |
+| `docs/decisions.md` | Decisiones con su motivo, y los cuatro episodios de delegación |
 | `docs/agent-setup.md` | Preparación del agente: entorno, instrucciones, permisos, adaptación |
 
 ### Decisiones técnicas
