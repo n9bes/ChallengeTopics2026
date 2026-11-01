@@ -475,7 +475,23 @@ es anterior e independiente de las pruebas que escribió el agente.
 **Decisión.** Aceptar las 11 pruebas sin correcciones, y quitar de la sección 10 de la spec
 la nota que declaraba a CA-35 y CA-36 como excepción sin prueba.
 
-**Motivo.** `PENDIENTE`. Lo dicta el humano.
+**Motivo.** Elegido por el humano entre tres alternativas que redactó la sesión principal, y
+aprobado con este texto:
+
+> Aceptar sin correcciones no descansó en el informe del agente. Los dos comportamientos de
+> S-11 y S-12 se habían verificado contra la API con un script propio de la sesión principal
+> antes de delegar, y la suite completa y el cruce de nombres contra la lista de criterios se
+> ejecutaron después en la sesión principal. A eso se suma que el agente agregó casos que no
+> se le pidieron y que vuelven la suite más difícil de pasar, no más fácil: el contraste de
+> CA-35 y el tercer caso de CA-36. Un autor que suma casos capaces de fallar no escribe
+> pruebas a la medida de la implementación, que es el riesgo que la separación de roles busca
+> evitar. Quitar la nota de la sección 10 es consecuencia directa: existía para que el hueco
+> no fuera silencioso, y mantenerla con las pruebas ya escritas habría vuelto falsa la propia
+> spec.
+
+La alternativa más fuerte que se descartó era apoyar la aceptación en que no había nada que
+corregir, porque ninguna prueba contradecía la spec. Describe el resultado, no el criterio
+con el que se decidió, y por eso quedó como razón secundaria.
 
 ### Evidencia
 
