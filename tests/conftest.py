@@ -54,3 +54,16 @@ def client(make_app: Callable[[], FastAPI]) -> Iterator[TestClient]:
     """Cliente sobre una base recién creada y vacía de reservas."""
     with TestClient(make_app()) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def client_sin_relanzar_excepciones(make_app: Callable[[], FastAPI]) -> Iterator[TestClient]:
+    """Igual que `client`, pero una excepción no atrapada del servidor llega como 500.
+
+    Con el `TestClient` por defecto, una excepción del servidor se vuelve a levantar en la
+    prueba: la falla aparece como excepción cruda y no como el incumplimiento del contrato
+    que la causa. Con `raise_server_exceptions=False` la respuesta real es observable, así
+    que la prueba puede afirmar el status que exige la sección 7.3.
+    """
+    with TestClient(make_app(), raise_server_exceptions=False) as test_client:
+        yield test_client

@@ -2,7 +2,8 @@
 
 Cada prueba se nombra con la regla, validación o supuesto que verifica:
 V-02 y S-06 (solicitante), el filtro de `GET /reservations`, su orden, y los 404 y
-VALIDATION_ERROR declarados en las secciones 7.3 y 7.4.
+VALIDATION_ERROR declarados en las secciones 7.3 y 7.4, incluido el `404
+RESERVATION_NOT_FOUND` de un ID inexistente en los bordes del rango de enteros.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from helpers import (
@@ -173,3 +175,64 @@ def test_s07_permite_cancelar_una_reserva_cuyo_horario_ya_paso(db_path: Path) ->
 
         assert response.status_code == 200, response.text
         assert response.json()["status"] == "cancelled"
+
+
+# Identificadores de reserva que ningún `POST /reservations` puede haber asignado, en los
+# bordes del rango de enteros. La sección 7.3 no acota la magnitud del ID de la ruta: para
+# cualquiera que no exista, los dos endpoints responden `404 RESERVATION_NOT_FOUND` con el
+# sobre de error de la sección 7.2.
+MAXIMO_ENTERO_SQLITE = 2**63 - 1  # 9223372036854775807
+IDS_INEXISTENTES = [
+    ("maximo_exacto", MAXIMO_ENTERO_SQLITE),
+    ("maximo_mas_uno", MAXIMO_ENTERO_SQLITE + 1),
+    ("negativo", -1),
+]
+
+
+@pytest.mark.parametrize(
+    "reservation_id",
+    [caso[1] for caso in IDS_INEXISTENTES],
+    ids=[caso[0] for caso in IDS_INEXISTENTES],
+)
+def test_contrato_responde_404_al_consultar_un_id_inexistente_de_cualquier_magnitud(
+    client_sin_relanzar_excepciones: TestClient, reservation_id: int
+) -> None:
+    """Sección 7.3: `GET /reservations/{id}` da `404 RESERVATION_NOT_FOUND` si no existe."""
+    response = client_sin_relanzar_excepciones.get(f"/reservations/{reservation_id}")
+
+    assert_error(response, status=404, code="RESERVATION_NOT_FOUND")
+
+
+@pytest.mark.parametrize(
+    "reservation_id",
+    [caso[1] for caso in IDS_INEXISTENTES],
+    ids=[caso[0] for caso in IDS_INEXISTENTES],
+)
+def test_contrato_responde_404_al_cancelar_un_id_inexistente_de_cualquier_magnitud(
+    client_sin_relanzar_excepciones: TestClient, reservation_id: int
+) -> None:
+    """Sección 7.3: `POST /reservations/{id}/cancel` da el mismo 404 si no existe."""
+    response = cancelar(client_sin_relanzar_excepciones, reservation_id)
+
+    assert_error(response, status=404, code="RESERVATION_NOT_FOUND")
+
+
+def test_contrato_el_404_de_un_id_enorme_no_toca_las_reservas_existentes(
+    client_sin_relanzar_excepciones: TestClient,
+) -> None:
+    """R-08 y sección 7.3: el ID fuera de rango no se confunde con una reserva real.
+
+    Con una reserva activa en la base, el 404 no puede venir de una tabla vacía ni de
+    reinterpretar el ID como otro valor: la base sigue activa después del intento.
+    """
+    client = client_sin_relanzar_excepciones
+    base = crear_base(client)
+
+    assert_error(
+        cancelar(client, MAXIMO_ENTERO_SQLITE + 1), status=404, code="RESERVATION_NOT_FOUND"
+    )
+
+    despues = client.get(f"/reservations/{base['id']}")
+    assert despues.status_code == 200, despues.text
+    assert despues.json()["status"] == "active"
+    assert despues.json()["cancelled_at"] is None

@@ -10,6 +10,9 @@ Invariantes:
   `cancelled_at` (R-08).
 - La verificacion de superposicion y la insercion ocurren en la misma transaccion de
   escritura, abierta con `BEGIN IMMEDIATE` (S-09).
+- Un ID de reserva fuera del rango de un INTEGER de SQLite no identifica ninguna
+  fila: se descarta antes de llegar a la consulta y la reserva se informa como
+  inexistente (seccion 7.3, `RESERVATION_NOT_FOUND`).
 - Los conflictos se deciden en Python con `domain.intervals_overlap`, no con una
   comparacion escrita de nuevo en SQL (R-07). SQL solo filtra las candidatas: las
   reservas activas de la unidad. Para un laboratorio local el costo es irrelevante y
@@ -34,6 +37,15 @@ INVENTORY_PATH = Path(__file__).with_name("inventory.json")
 
 DB_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 """Formato fijo de las fechas en la base, sin el sufijo Z."""
+
+SQLITE_INTEGER_MIN = -(2**63)
+SQLITE_INTEGER_MAX = 2**63 - 1
+"""Rango de un INTEGER de SQLite, un entero con signo de 64 bits.
+
+Es un limite del motor de almacenamiento, no del dominio. Los IDs son positivos y
+los asigna `AUTOINCREMENT`, asi que el borde que importa en la practica es el
+superior; el inferior se incluye porque la ruta acepta enteros negativos.
+"""
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS units (
@@ -76,6 +88,20 @@ def from_db_text(value: str) -> datetime:
     return datetime.strptime(value, DB_TIMESTAMP_FORMAT + "Z").replace(
         tzinfo=timezone.utc
     )
+
+
+def fits_in_sqlite_integer(value: int) -> bool:
+    """Indica si un entero puede almacenarse y consultarse como INTEGER de SQLite.
+
+    Entrada: cualquier `int` de Python, que no tiene cota de tamano. Salida: `True`
+    si esta dentro de `[SQLITE_INTEGER_MIN, SQLITE_INTEGER_MAX]`.
+
+    Se comprueba antes de pasar el valor a una consulta: `sqlite3` levanta
+    `OverflowError` con un entero mas grande que el maximo. La comprobacion es
+    explicita, y no un `except OverflowError`, para no confundir este caso con
+    cualquier otro desborde que pudiera venir de otra parte de la consulta.
+    """
+    return SQLITE_INTEGER_MIN <= value <= SQLITE_INTEGER_MAX
 
 
 def load_inventory(path: Path = INVENTORY_PATH) -> list[Unit]:
@@ -175,6 +201,13 @@ class Database:
         return Unit(id=row["id"], name=row["name"]) if row else None
 
     def get_reservation(self, reservation_id: int) -> Reservation | None:
+        """Busca una reserva por ID, o `None` si no existe.
+
+        Un ID fuera del rango de la seccion `SQLITE_INTEGER_*` no puede corresponder
+        a ninguna fila, asi que se informa como inexistente sin consultar.
+        """
+        if not fits_in_sqlite_integer(reservation_id):
+            return None
         with self._connect() as connection:
             row = connection.execute(
                 f"{SELECT_RESERVATION} WHERE id = ?", (reservation_id,)
@@ -280,9 +313,17 @@ class Database:
     ) -> Reservation:
         """Cancela una reserva activa conservando la fila (R-08, R-09).
 
-        Rechaza con `RESERVATION_NOT_FOUND` si el ID no existe y con
-        `ALREADY_CANCELLED` si ya estaba cancelada.
+        Rechaza con `RESERVATION_NOT_FOUND` si el ID no existe, incluido el ID fuera
+        del rango de un INTEGER de SQLite, y con `ALREADY_CANCELLED` si ya estaba
+        cancelada. La comprobacion del rango se repite aca y no se delega en
+        `get_reservation`: esta es la segunda entrada por la que un ID llega a una
+        consulta y tiene que ser correcta por si sola.
         """
+        if not fits_in_sqlite_integer(reservation_id):
+            raise ApiError(
+                ErrorCode.RESERVATION_NOT_FOUND,
+                f"No existe la reserva {reservation_id}.",
+            )
         with self._write_transaction() as connection:
             row = connection.execute(
                 f"{SELECT_RESERVATION} WHERE id = ?", (reservation_id,)
