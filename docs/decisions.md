@@ -563,3 +563,115 @@ no inventar datos.
 | Decisión, motivo y alternativa descartada | D-001 de este archivo |
 | El control que disparó | `docs/agent-setup.md`, "Controles aplicados", control 1 |
 | Efecto comprobable de la regla instalada | la tabla de entorno de `docs/agent-setup.md` declara cada versión con el comando que la obtuvo, `claude --version`, `git --version` y `python --version`, en lugar de afirmarlas de memoria |
+
+---
+
+## Episodio 4. Revisión de código y corrección de los cuatro hallazgos
+
+**Fecha:** 2026-11-01
+
+### Objetivo y requisito
+
+Cerrar el último paso del flujo descrito en `docs/agent-setup.md`, la revisión con la skill
+integrada `/code-review`, y decidir qué hacer con lo que encontrara. El requisito de la
+consigna que gobierna este episodio es la verificación humana de los resultados y la
+distinción entre lo informado por el agente y lo realmente comprobado.
+
+La revisión la corrió la sesión principal sobre `src/` y `tests/`. Las correcciones se
+delegaron, porque el código de producción es territorio de `domain-builder` según la
+sección 9 de la spec: que la sesión principal escriba en `src/` debilitaría el control 3,
+la separación entre quien implementa y quien prueba.
+
+### Contexto suministrado
+
+| Qué | A quién | Forma |
+|---|---|---|
+| Reproducción exacta del fallo, con los status observados en cada borde | ambos | Literal en la instrucción, incluido el comando y el cliente usado |
+| Las dos cláusulas del contrato que el fallo rompe: el 404 de la sección 7.3 y el sobre de la 7.2 | ambos | Explícito, con la cita de cada sección |
+| Que el código correcto es `RESERVATION_NOT_FOUND`, sin inventar uno nuevo | `domain-builder` | Explícito |
+| Criterio sobre dónde poner el límite, con la decisión delegada al agente | `domain-builder` | Explícito, ver el extracto |
+| Que `TestClient` por defecto relanza la excepción en vez de dar 500 | `contract-tester` | Explícito, porque sin eso la prueba falla con una excepción cruda |
+| Que no toque los otros tres hallazgos | `domain-builder` | Explícito, porque cada corrección la decide el humano |
+
+### Extracto de instrucción
+
+A `domain-builder`, sobre dónde vive la restricción y cómo comprobarla. Lo que importa acá
+es que la instrucción da el criterio y deja la decisión en el agente, en lugar de dictarle
+el parche:
+
+> Sobre dónde poner el límite, decidís vos, pero te doy el criterio con el que lo miraría:
+> la restricción es del motor de almacenamiento, no del dominio, así que el lugar natural
+> es `storage.py` [...] Preferí una comprobación explícita y documentada antes que atrapar
+> `OverflowError` a ciegas: el proyecto pide código explícito y no silenciar errores.
+
+A `contract-tester`, sobre qué debe afirmar la prueba. Es la instrucción que evita el error
+más fácil de cometer acá, escribir una prueba que documente el bug en lugar del contrato:
+
+> Las pruebas afirman el `404` que exige la spec, nunca el `500` de hoy.
+
+### Acción o resultado
+
+**La revisión** produjo cuatro hallazgos, dos de ellos confirmados ejecutando código y no
+solo leyéndolo: un ID de reserva mayor al máximo de un INTEGER de SQLite llegaba a la
+consulta y devolvía HTTP 500 en lugar del 404 del contrato; y la suite entera no corría con
+`pytest --import-mode=importlib`, que falla al colectar. Los otros dos fueron la versión
+publicada en `/openapi.json`, que decía 1.0.0 mientras la aplicación implementaba el
+contrato 1.1.0, y el reinicio de datos, que no borraba los archivos auxiliares de SQLite.
+
+**`domain-builder`** corrigió el 500 en `storage.py` con una comprobación explícita del
+rango, aplicada por separado en las dos entradas por las que un ID llega a una consulta, y
+documentó por qué no se delega una en la otra. Encontró además algo que la revisión no vio:
+el extremo negativo también fallaba. En una segunda vuelta corrigió la versión y los
+auxiliares, bajó el número de versión de tres lugares a dos sin agregar indirección, y
+declaró dos residuales que decidió no tocar, con su motivo.
+
+**`contract-tester`** escribió 7 pruebas y, sin que se le pidiera, comprobó que no pasaban
+por casualidad: exportó el `src/` de `HEAD` con `git archive`, corrió el archivo nuevo
+contra esa copia previa a la corrección y obtuvo exactamente las 3 fallas que apuntan al
+borde roto, con `AssertionError: se esperaba HTTP 404 y se recibio 500`. Los casos del
+máximo exacto y del negativo pasan antes y después, que es su función: fijan los dos lados
+del borde.
+
+### Verificado por la sesión principal
+
+| Comando | Resultado |
+|---|---|
+| `.venv/Scripts/python -m pytest -q` | `87 passed, 1 warning` |
+| `.venv/Scripts/python -m pytest -q --import-mode=importlib` | `87 passed, 1 warning`, donde antes eran 0 pruebas y un error de colecta |
+| Script propio de caja negra con `raise_server_exceptions=False` | 17 comprobaciones en los dos extremos del rango, en `GET` y en `POST .../cancel`, todas `404 RESERVATION_NOT_FOUND` con sobre; y la reserva real sigue activa y cancelable |
+| `GET /openapi.json` | `version` y `description` en 1.1.0, coherentes con la cabecera de la spec y con `pyproject.toml` |
+| Comando de reinicio en tres escenarios creados a mano | Borra los tres auxiliares y nombra los que encontró; un vecino `r.db.bak` sobrevive, o sea que no barre por prefijo; y el auxiliar huérfano sin base no se limpia, residual que quedó documentado en el README |
+
+El fallo del 500 lo reprodujo primero la sesión principal, antes de delegar, y lo verificó
+después con un script independiente de `tests/`. La corrección no se aceptó por el informe
+del agente.
+
+### Decisión del humano y motivo
+
+**Decisión.** Corregir los cuatro hallazgos. Primero el del 500, en una delegación aparte,
+y después los otros tres. Aceptar las dos correcciones sin cambios.
+
+**Motivo.** Elegido por el humano entre tres alternativas que redactó la sesión principal, y
+aprobado con este texto:
+
+> La revisión es un control, no una formalidad, y un control que no se acciona no es un
+> control. Los cuatro hallazgos se corrigieron porque dos estaban confirmados ejecutando
+> código y los otros dos eran incoherencias verificables en la superficie del entregable.
+> Dejar cualquiera abierto habría significado entregar sabiendo de un defecto, que es peor
+> que no haber revisado.
+
+**Alternativas descartadas.** La primera apoyaba la aceptación en que la sesión principal
+pudo reproducir el fallo antes de delegar y verificarlo después por su cuenta; queda como
+hecho en la tabla de verificación de arriba, pero no como el criterio de la decisión. La
+segunda apoyaba la decisión en haber corregido en dos delegaciones separadas en lugar de
+una; describe el método, no el motivo.
+
+### Evidencia
+
+| Qué | Dónde |
+|---|---|
+| Corrección del 500 | commit `0391a12`, `src/reservas/storage.py`, función `fits_in_sqlite_integer` y su uso en `get_reservation` y `cancel_reservation` |
+| Pruebas del borde | `tests/test_contrato_sin_criterio.py`, las seis parametrizadas `..._de_cualquier_magnitud` más `test_contrato_el_404_de_un_id_enorme_no_toca_las_reservas_existentes`, y la fixture `client_sin_relanzar_excepciones` de `tests/conftest.py` |
+| Corrección de los otros tres | commit `fix: corregir los tres hallazgos restantes de la revisión` |
+| Residual documentado en lugar de silenciado | `README.md`, "Pendientes y limitaciones", el auxiliar huérfano sin base |
+| Que la suite corre en los dos modos de importación | `pyproject.toml`, `pythonpath = ["src", "tests"]`, con el motivo en un comentario |

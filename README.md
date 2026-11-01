@@ -299,8 +299,6 @@ Quién ejecutó qué: ver "Pendientes y limitaciones" abajo.
 
 ### Pendientes y limitaciones
 
-- **`/code-review` todavía no corrió.** Es el último paso del flujo descrito en
-  `agent-setup.md`.
 - **El procedimiento manual de arriba lo ejecutó el subagente `domain-builder`**, que reportó
   haberlo corrido con dos procesos uvicorn y obtener los resultados esperados. La sesión
   principal no lo ejecutó. Lo que la sesión principal sí ejecutó es la verificación
@@ -358,9 +356,11 @@ la alternativa considerada cuando hubo disyuntiva, y la consecuencia: D-001 a D-
 origen de las instrucciones del proyecto hasta la forma del contrato de la API y el manejo de
 dependencias.
 
-Al final del mismo archivo están los tres episodios de delegación, cada uno con objetivo y
+Al final del mismo archivo están los episodios de delegación, cada uno con objetivo y
 requisito, contexto suministrado, extracto de instrucción, resultado del agente, decisión
-humana con su motivo y una tabla de evidencia verificable:
+humana con su motivo y una tabla de evidencia verificable. La consigna pide tres; el cuarto
+se agrega porque la revisión de código encontró un fallo real y la cadena de evidencia
+quedó completa:
 
 - **Episodio 1.** Implementación y pruebas de la fase 1, delegadas en paralelo a
   `domain-builder` y `contract-tester` sobre directorios disjuntos. Incluye el defecto que la
@@ -370,6 +370,10 @@ humana con su motivo y una tabla de evidencia verificable:
   `contract-tester` en un segundo pedido.
 - **Episodio 3.** El clasificador de permisos del harness bloqueando la instalación de un
   `CLAUDE.md` traído de un repositorio público, y la corrección del procedimiento.
+- **Episodio 4.** La revisión de código con `/code-review`, que encontró cuatro hallazgos,
+  dos de ellos confirmados ejecutando código, y las dos delegaciones que los corrigieron.
+  Incluye el más grave: un ID de reserva fuera del rango de SQLite devolvía HTTP 500 en
+  lugar del 404 del contrato.
 
 En todo el repositorio se usan solicitantes ficticios. No hay secretos, tokens, credenciales
 ni transcripciones completas de conversación.

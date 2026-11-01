@@ -9,8 +9,9 @@ que no se versiona es `.claude/settings.local.json`, que contiene rutas de la m�
 permisos concedidos, y la configuración personal del autor, que vive fuera del repositorio
 y se resume saneada más abajo. Ver [Qué se excluye y por qué](#qué-se-excluye-y-por-qué).
 
-Estado: ya no quedan secciones marcadas con `PENDIENTE`. Del flujo descrito más abajo falta
-solo la revisión final con `/code-review`. No se registra como hecho nada que no se haya
+Estado: ya no quedan secciones marcadas con `PENDIENTE`. El flujo descrito más abajo se
+completó, revisión final con `/code-review` incluida; lo que encontró y cómo se corrigió
+está en el episodio 4 de `docs/decisions.md`. No se registra como hecho nada que no se haya
 ejecutado.
 
 ## Entorno y modelo
